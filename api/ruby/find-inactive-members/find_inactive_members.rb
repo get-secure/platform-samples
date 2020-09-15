@@ -1,10 +1,30 @@
 =begin
+
+Inputs
+-o organization
+-d date in quotes for example "July 4 2020"
+-s start row for repository
+-f finish row for repository
+
+example: ruby find_inactive_members.rb -o github -d "Aug 4 2020" -s 1 -f 30
+
+The below script
+* prints all organization members into all_members.csv
+* prints all repo names in a repositories.csv
+* For the set of repositories we are analyzing, a csv will be generated of active users
+* Once you're able to generate all active reports across all repositories, you can consolidate those into one list with unique users.
+* Compare all_members list from active users from above to find inactive members
+
+
+Script Logic
  1. Loops through all organization_members
  2. Loops through all organization_repositories
- 3. member_activity - loops through each repo, and for each action, loops through each user to update active status
+ 3. member_activity - loops through each repo, returns actions since specified date, and marks members as active 
  4. member_activity - open CSV, print inactive users
 
 Runtime: total # of members (N) * total # of repo(N) * member actions (1) = N^2
+
+Instead of N^2 runtime, we'll reduce this to N by by making repositories we access static to a certain number
 
 Ideas
 * Option 1: We can look to print repositories in a CSV, and run this script on a subset of repos. Each printed csv would give
@@ -14,7 +34,17 @@ us inactive users for that group of users
 
 Other Ideas:
 * We can use GET /rate_limit (documented here: https://developer.github.com/v3/rate_limit/) to sleep when needed, and restart the script using the returned reset (The time at which the current rate limit window resets in UTC epoch seconds)
+* We can limit the number of events we check against (comment out lines 270-273)
+* Run as a background job
 
+Implemention Design
+* Print all repositories to a csv doc
+* Use csv doc as input for script
+  * For example, ruby find_inactive_members.rb 1 30 -o github -d "Aug 4 2020" should find active users since the date for the first 30 repos
+  * For example, ruby find_inactive_members.rb 31 60 -o github -d "Aug 4 2020" should find active users since the date for the 31st to 60th repos
+* Print active users for that subset of repositories
+  * Make the name of the outputted file dynamic so it's not over written
+* At the end, merge all active lists into one unique list - compare that with the all_members.csv to find inactive users
 
 =end
 
@@ -24,7 +54,7 @@ require 'optparse'
 require 'optparse/date'
 
 class InactiveMemberSearch
-  attr_accessor :organization, :members, :repositories, :date, :unrecognized_authors
+  attr_accessor :organization, :members, :repositories, :date, :unrecognized_authors, :group
 
   SCOPES=["read:org", "read:user", "repo", "user:email"]
 
@@ -40,12 +70,16 @@ class InactiveMemberSearch
     raise(OptionParser::MissingArgument) if (
       options[:organization].nil? or
       options[:date].nil?
+      options[:start].nil?
+      options[:finish].nil?
     )
 
     @date = options[:date]
     @organization = options[:organization]
     @email = options[:email]
     @unrecognized_authors = []
+    @start_row = options[:start].to_i - 1
+    @finish_row = options[:finish].to_i - 1
 
     organization_members
     organization_repositories
@@ -111,6 +145,7 @@ private
     end
     info "#{@members.length} members found.\n"
    
+
     CSV.open("all_members.csv", "wb") do |csv|
       csv << ["login", "email"]
       # iterate and print inactive members
@@ -124,17 +159,29 @@ private
       info "Members saved in csv format"
     end
    
-    exit(0)
-   
   end
 
   def organization_repositories
-    info "Gathering a list of repositories..."
+    info "\n Gathering a list of repositories..."
     # get all repos in the organizaton and place into a hash
     @repositories = @client.organization_repositories(@organization).collect do |repo|
       repo["full_name"]
     end
     info "#{@repositories.length} repositories discovered\n"
+
+
+    CSV.open("repositories.csv", "wb") do |csv|
+      csv << ["repositories"]
+      # iterate and print inactive members
+      @repositories.each do |repo|
+        repo_detail = []
+        repo_detail << repo
+        csv << repo_detail
+      end 
+    end
+
+    info "\n Repos saved in csv format"
+
   end
 
   def add_unrecognized_author(author)
@@ -149,7 +196,7 @@ private
 
   def commit_activity(repo)
     # get all commits after specified date and iterate
-    info "...commits"
+    info "\n...commits"
     begin
       @client.commits_since(repo, @date).each do |commit|
         # if commmitter is a member of the org and not active, make active
@@ -171,7 +218,7 @@ private
 
   def issue_activity(repo, date=@date)
     # get all issues after specified date and iterate
-    info "...Issues"
+    info "\n...Issues"
     begin
       @client.list_issues(repo, { :since => date }).each do |issue|
         # if there's no user (ghost user?) then skip this   // THIS NEEDS BETTER VALIDATION
@@ -191,7 +238,7 @@ private
 
   def issue_comment_activity(repo, date=@date)
     # get all issue comments after specified date and iterate
-    info "...Issue comments"
+    info "\n...Issue comments"
     begin
       @client.issues_comments(repo, { :since => date }).each do |comment|
         # if there's no user (ghost user?) then skip this   // THIS NEEDS BETTER VALIDATION
@@ -211,7 +258,7 @@ private
 
   def pr_activity(repo, date=@date)
     # get all pull request comments comments after specified date and iterate
-    info "...Pull Request comments"
+    info "\n...Pull Request comments"
     @client.pull_requests_comments(repo, { :since => date }).each do |comment|
       # if there's no user (ghost user?) then skip this   // THIS NEEDS BETTER VALIDATION
       if comment["user"].nil?
@@ -227,10 +274,16 @@ private
  def member_activity
     @repos_completed = 0
     # print update to terminal
-    info "Analyzing activity for #{@members.length} members and #{@repositories.length} repos for #{@organization}\n"
 
+    # scope repositories to static number based on inputted arguments
+    @grouped_repositories = @repositories[@start_row..@finish_row]
+
+    info "\n Analyzing activity for #{@members.length} members and #{@grouped_repositories.length} repos for #{@organization}\n"
+
+    info "\n first repo to be analyzed: #{@grouped_repositories[@start_row]}"
+    info "\n last repo to be analyzed: #{@grouped_repositories[@finish_row]}"
     # for each repo
-    @repositories.each do |repo|
+    @grouped_repositories.each do |repo|
       info "rate limit remaining: #{@client.rate_limit.remaining}  "
       info "analyzing #{repo}"
 
@@ -241,19 +294,20 @@ private
 
       # print update to terminal
       @repos_completed += 1
-      info "...#{@repos_completed}/#{@repositories.length} repos completed\n"
+      info "...#{@repos_completed}/#{@grouped_repositories.length} repos completed\n"
     end
 
+    filename = "active_users_for_repos-#{@start_row}-to-#{@finish_row}.csv"
     # open a new csv for output
-    CSV.open("inactive_users.csv", "wb") do |csv|
+    CSV.open(filename, "wb") do |csv|
       csv << ["login", "email"]
       # iterate and print inactive members
       @members.each do |member|
-        if member[:active] == false
+        if member[:active] == true
           member_detail = []
           member_detail << member[:login]
           member_detail << member[:email] unless member[:email].nil?
-          info "#{member_detail} is inactive\n"
+          info "#{member_detail} is active\n in the repositories we've accessed"
           csv << member_detail
         end
       end
@@ -290,6 +344,14 @@ OptionParser.new do |opts|
 
   opts.on('-o', '--organization MANDATORY',String, "Organization to scan for inactive users") do |o|
     options[:organization] = o
+  end
+
+  opts.on('-s', '--start MANDATORY',String, "csv start column") do |s|
+    options[:start] = s
+  end
+
+  opts.on('-f', '--finish MANDATORY',String, "csv end column") do |f|
+    options[:finish] = f
   end
 
   opts.on('-v', '--verbose', "More output to STDERR") do |v|
