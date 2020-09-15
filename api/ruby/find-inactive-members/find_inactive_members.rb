@@ -1,3 +1,20 @@
+=begin
+ 1. Loops through all organization_members
+ 2. Loops through all organization_repositories
+ 3. member_activity - loops through each repo, and for each action, loops through each user to update active status
+ 4. member_activity - open CSV, print inactive users
+
+Runtime: total # of members (N) * total # of repo(N) * member actions (1) = N^2
+
+Ideas
+* Option 1: We can look to print repositories in a CSV, and run this script on a subset of repos. Each printed csv would give
+us inactive users for that group of repos - inactive users across all groups are truly inactive across the organization
+* Option 2: We can look to print member information in a CSV, and run this script on a subset of members. Each printed csv would give
+us inactive users for that group of users
+
+
+=end
+
 require "csv"
 require "octokit"
 require 'optparse'
