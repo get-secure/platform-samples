@@ -1,5 +1,8 @@
 =begin
 
+TO BE COMPLETED:
+- edit readme, delete below repetitive info
+
 Inputs
 -o organization
 -d date in quotes for example "July 4 2020"
