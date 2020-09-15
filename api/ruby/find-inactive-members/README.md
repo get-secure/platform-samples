@@ -48,12 +48,13 @@ export OCTOKIT_API_ENDPOINT="https://<your_github_enterprise_instance>/api/v3" #
 ## Usage
 
 ```
-ruby find_inactive_members.rb [-cehv] -o ORGANIZATION -d DATE
+ruby find_inactive_members.rb -o myOrg -d "Aug 4 2020" -s 1 -f 500  &    --> run in background, print to cli
+nohup ruby find_inactive_members.rb -o myOrg -d "Aug 4 2020" -s 2 -f 3 > out.log 2>&1 &.  --> run in background, print to log file
 ```
 
 ## Examples
 ```
-ruby find_inactive_members.rb -o myOrg -d "Aug 4 2020" -s 1 -f 500  > out.log 2>&1 &
+
 ```
 
 ## How Inactivity is Defined
