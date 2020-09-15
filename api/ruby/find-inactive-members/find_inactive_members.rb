@@ -12,6 +12,9 @@ us inactive users for that group of repos - inactive users across all groups are
 * Option 2: We can look to print member information in a CSV, and run this script on a subset of members. Each printed csv would give
 us inactive users for that group of users
 
+Other Ideas:
+* We can use GET /rate_limit (documented here: https://developer.github.com/v3/rate_limit/) to sleep when needed, and restart the script using the returned reset (The time at which the current rate limit window resets in UTC epoch seconds)
+
 
 =end
 
