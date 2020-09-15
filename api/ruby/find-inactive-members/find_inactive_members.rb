@@ -107,6 +107,22 @@ private
       }
     end
     info "#{@members.length} members found.\n"
+   
+    CSV.open("all_members.csv", "wb") do |csv|
+      csv << ["login", "email"]
+      # iterate and print inactive members
+      @members.each do |member|
+        member_detail = []
+        member_detail << member[:login]
+        member_detail << member[:email] unless member[:email].nil?
+        csv << member_detail
+        # info "#{member_detail} is saved\n"
+      end
+      info "Members saved in csv format"
+    end
+   
+    exit(0)
+   
   end
 
   def organization_repositories
