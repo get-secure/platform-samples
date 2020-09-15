@@ -1,16 +1,25 @@
 # Find Inactive Organization Members
 
+This is a forked version of [this script](https://github.com/github/platform-samples/blob/master/api/ruby/find-inactive-members/find_inactive_members.rb) for organizations that are looking to find inactive users and are running into rate limiting issues.
+
+The script:
+* prints all organization members into all_members.csv
+* prints all repo names in a repositories.csv
+* For the set of repositories we are analyzing, a csv will be generated of active users
+* Once you're able to generate all active reports across all repositories, you can consolidate those into one list with unique users.
+* Compare all_members list from active users from above to find inactive members
+
 ```
 find_inactive_members.rb - Find and output inactive members in an organization
-    -c, --check                      Check connectivity and scope
     -d, --date MANDATORY             Date from which to start looking for activity (in a format parseable by the Ruby Date class: https://ruby-doc.org/stdlib/libdoc/date/rdoc/Date.html)
-    -e, --email                      Fetch the user email (can make the script take longer)
     -o, --organization MANDATORY     Organization to scan for inactive users
+    -s, --start repository MANDATORY integer, defines start range of repositories to be analyzed
+    -f, --finish repository MANDATORY integer, defines end range of repositories to be analyzed
+    -c, --check                      Check connectivity and scope
+    -e, --email                      Fetch the user email (can make the script take longer)
     -v, --verbose                    More output to STDERR
     -h, --help                       Display this help
 ```
-
-This utility finds users inactive since the given date and writes those users to the file `inactive_users.csv`.
 
 ## Installation
 
@@ -39,12 +48,13 @@ export OCTOKIT_API_ENDPOINT="https://<your_github_enterprise_instance>/api/v3" #
 ## Usage
 
 ```
-ruby find_inactive_members.rb [-cehv] -o ORGANIZATION -d DATE
+ruby find_inactive_members.rb -o myOrg -d "Aug 4 2020" -s 1 -f 500  &    --> run in background, print to cli
+nohup ruby find_inactive_members.rb -o myOrg -d "Aug 4 2020" -s 2 -f 3 > out.log 2>&1 &.  --> run in background, print to log file
 ```
 
 ## Examples
 ```
-ruby find_inactive_members.rb -o YoyodynePropulsionSystems -d "Feb 10 2020"
+
 ```
 
 ## How Inactivity is Defined
