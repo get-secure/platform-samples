@@ -6,8 +6,19 @@ The script:
 * prints all organization members into all_members.csv
 * prints all repo names in a repositories.csv
 * For the set of repositories we are analyzing, a csv will be generated of active users
-* Once you're able to generate all active reports across all repositories, you can consolidate those into one list with unique users.
-* Compare all_members list from active users from above to find inactive members
+* Once you're able to generate all active reports across all repositories, consolidate those into one list.
+* Compare all_members list with the active users list from above. Users in the all_members list that aren't in the active_users list are considered inactive members
+
+
+Steps
+* Find the total number of repositories - this number will also be printed when you first run the script
+* Limit each run to no more than 1500 repositories
+* For example, if your organization 'get-secure' has 3500 repos, script invocation would be as such:
+   * ```ruby find_inactive_members.rb -o myOrg -d "Aug 4 2020" -s 1 -f 1500  &```
+   * ```ruby find_inactive_members.rb -o myOrg -d "Aug 4 2020" -s 1501 -f 2500  &```
+   * ```ruby find_inactive_members.rb -o myOrg -d "Aug 4 2020" -s 2501 -f 3500  &```
+
+
 
 ```
 find_inactive_members.rb - Find and output inactive members in an organization
@@ -50,11 +61,6 @@ export OCTOKIT_API_ENDPOINT="https://<your_github_enterprise_instance>/api/v3" #
 ```
 ruby find_inactive_members.rb -o myOrg -d "Aug 4 2020" -s 1 -f 500  &    --> run in background, print to cli
 nohup ruby find_inactive_members.rb -o myOrg -d "Aug 4 2020" -s 2 -f 3 > out.log 2>&1 &.  --> run in background, print to log file
-```
-
-## Examples
-```
-
 ```
 
 ## How Inactivity is Defined
