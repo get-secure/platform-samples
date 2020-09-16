@@ -1,22 +1,17 @@
 =begin
 
-TO BE COMPLETED:
-- edit readme, delete below repetitive info
-
-Inputs
--o organization
--d date in quotes for example "July 4 2020"
--s start row for repository
--f finish row for repository
-
-example: ruby find_inactive_members.rb -o github -d "Aug 4 2020" -s 1 -f 30
-
 The below script
 * prints all organization members into all_members.csv
 * prints all repo names in a repositories.csv
 * For the set of repositories we are analyzing, a csv will be generated of active users
 * Once you're able to generate all active reports across all repositories, you can consolidate those into one list with unique users.
 * Compare all_members list from active users from above to find inactive members
+
+
+Test Run
+* 500 repos for org with ~2500 users, ~35 minutes
+* 1500 repos for org with ~2500 users, ~1.5 hrs
+* 1750 repos for org with ~2500 users, TBD
 
 
 Script Logic
@@ -37,8 +32,9 @@ us inactive users for that group of users
 
 Other Ideas:
 * We can use GET /rate_limit (documented here: https://developer.github.com/v3/rate_limit/) to sleep when needed, and restart the script using the returned reset (The time at which the current rate limit window resets in UTC epoch seconds)
+  * Added check_rate_limit_and_sleep_method
 * We can limit the number of events we check against (comment out lines 270-273)
-* Run as a background job
+* Run as a background job and we can also redirect logs to a file
 
 Implemention Design
 * Print all repositories to a csv doc
@@ -100,6 +96,15 @@ class InactiveMemberSearch
 
   def check_rate_limit
     info "Rate limit: #{@client.rate_limit.remaining}/#{@client.rate_limit.limit}\n"
+  end
+
+  def check_rate_limit_and_sleep
+    info "Rate limit: #{@client.rate_limit.remaining}/#{@client.rate_limit.limit}\n"
+
+    while @client.rate_limit.remaining.to_i < 20
+      sleep(300) #wait for 5 mins, try again
+      info "Slept"
+    end
   end
 
   def env_help
@@ -287,8 +292,12 @@ private
     info "\n last repo to be analyzed: #{@grouped_repositories[@finish_row]}"
     # for each repo
     @grouped_repositories.each do |repo|
-      info "rate limit remaining: #{@client.rate_limit.remaining}  "
       info "analyzing #{repo}"
+
+      info "rate limit remaining: #{@client.rate_limit.remaining}  "
+      
+
+      check_rate_limit_and_sleep
 
       commit_activity(repo)
       issue_activity(repo)
