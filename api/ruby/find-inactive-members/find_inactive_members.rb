@@ -1,17 +1,17 @@
 =begin
 
-The below script
+This script:
 * prints all organization members into all_members.csv
 * prints all repo names in a repositories.csv
 * For the set of repositories we are analyzing, a csv will be generated of active users
-* Once you're able to generate all active reports across all repositories, you can consolidate those into one list with unique users.
-* Compare all_members list from active users from above to find inactive members
+* Once you're able to generate all active reports across all repositories, you can consolidate those into one list.
+* Compare all_members list from the consolidated active users list from above. Members in the all_members list that are not in the active_user list are considered inactive.
 
 
-Test Run
+Test Runs (script speed will depend on # of events within repositories)
 * 500 repos for org with ~2500 users, ~35 minutes
 * 1500 repos for org with ~2500 users, ~1.5 hrs
-* 1750 repos for org with ~2500 users, TBD
+* 1750 repos for org with ~2500 users, ~2 hrs
 
 
 Script Logic
@@ -23,12 +23,6 @@ Script Logic
 Runtime: total # of members (N) * total # of repo(N) * member actions (1) = N^2
 
 Instead of N^2 runtime, we'll reduce this to N by by making repositories we access static to a certain number
-
-Ideas
-* Option 1: We can look to print repositories in a CSV, and run this script on a subset of repos. Each printed csv would give
-us inactive users for that group of repos - inactive users across all groups are truly inactive across the organization
-* Option 2: We can look to print member information in a CSV, and run this script on a subset of members. Each printed csv would give
-us inactive users for that group of users
 
 Other Ideas:
 * We can use GET /rate_limit (documented here: https://developer.github.com/v3/rate_limit/) to sleep when needed, and restart the script using the returned reset (The time at which the current rate limit window resets in UTC epoch seconds)
